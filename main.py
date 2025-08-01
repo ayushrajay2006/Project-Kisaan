@@ -1,14 +1,15 @@
 # main.py
-# The server now delegates to the Policy Advisor agent.
+# The server can now delegate to all four specialist agents.
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
 
-# Import functions from our agents
+# Import functions from all our agents
 from orchestrator import listen_and_transcribe, recognize_intent
 from market_guru import get_market_price
 from digital_pathologist import diagnose_crop_health
-from policy_advisor import get_scheme_information # <-- New Import
+from policy_advisor import get_scheme_information
+from sky_watcher import get_weather_forecast # <-- New Import
 
 # --- Pre-flight Check for Microphone (Unchanged) ---
 try:
@@ -24,7 +25,7 @@ except OSError:
 app = FastAPI(
     title="AI Farmer Assistant API",
     description="An AI-powered assistant to help farmers with pricing, crop diseases, and government schemes.",
-    version="0.5.0", # Version bump for new agent!
+    version="0.6.0", # Version bump for feature completion!
 )
 
 class ListenRequest(BaseModel):
@@ -51,16 +52,16 @@ def handle_listen_and_understand(request: ListenRequest):
     intent = recognize_intent(transcribed_text, language_code)
     
     agent_response = None
-    # --- DELEGATION LOGIC ---
+    # --- FINAL DELEGATION LOGIC ---
     if intent == "Market_Analysis":
         agent_response = get_market_price(transcribed_text)
     elif intent == "Scheme_Information":
-        # If intent is about schemes, call the Policy Advisor
         agent_response = get_scheme_information(transcribed_text)
+    elif intent == "Weather_Forecast":
+        # If intent is about weather, call the Sky Watcher
+        agent_response = get_weather_forecast(transcribed_text)
     elif intent == "Crop_Health_Diagnosis":
         agent_response = {"status": "info", "message": "Crop health agent is not yet implemented for voice. Please use the /diagnose_disease endpoint to upload an image."}
-    elif intent == "Weather_Forecast":
-        agent_response = {"status": "info", "message": "Weather forecast agent is not yet implemented."}
     else:
         agent_response = {"status": "info", "message": "Could not determine a specific action for your request."}
 
