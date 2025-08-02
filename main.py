@@ -1,5 +1,5 @@
 # main.py
-# The server can now delegate to all four specialist agents.
+# This version adds print statements to the main delegation logic to solve the final bug.
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ from orchestrator import listen_and_transcribe, recognize_intent
 from market_guru import get_market_price
 from digital_pathologist import diagnose_crop_health
 from policy_advisor import get_scheme_information
-from sky_watcher import get_weather_forecast # <-- New Import
+from sky_watcher import get_weather_forecast
 
 # --- Pre-flight Check for Microphone (Unchanged) ---
 try:
@@ -25,7 +25,7 @@ except OSError:
 app = FastAPI(
     title="AI Farmer Assistant API",
     description="An AI-powered assistant to help farmers with pricing, crop diseases, and government schemes.",
-    version="0.6.0", # Version bump for feature completion!
+    version="0.6.1", # Version bump for debugging!
 )
 
 class ListenRequest(BaseModel):
@@ -41,30 +41,42 @@ def handle_listen_and_understand(request: ListenRequest):
     """
     Handles the voice-based interaction workflow.
     """
-    print(f"Received request to listen in language: {request.language_code}")
+    print("\n--- New Request Received ---") # <<< DEBUG PRINT
     
+    # Step 1: Listen and Transcribe
     transcription_result = listen_and_transcribe(language_code=request.language_code)
     if transcription_result["status"] == "error":
         raise HTTPException(status_code=400, detail=transcription_result["message"])
     
     transcribed_text = transcription_result["transcription"]
     language_code = transcription_result["language"]
+    
+    # Step 2: Recognize Intent
     intent = recognize_intent(transcribed_text, language_code)
     
+    # --- NEW DEBUGGING PRINTS ---
+    print(f">>> Intent recognized as: '{intent}'")
+    print(">>> Entering delegation logic...")
+    # --- END OF DEBUGGING PRINTS ---
+
     agent_response = None
-    # --- FINAL DELEGATION LOGIC ---
     if intent == "Market_Analysis":
+        print(">>> Delegating to Market Guru...") # <<< DEBUG PRINT
         agent_response = get_market_price(transcribed_text)
     elif intent == "Scheme_Information":
+        print(">>> Delegating to Policy Advisor...") # <<< DEBUG PRINT
         agent_response = get_scheme_information(transcribed_text)
     elif intent == "Weather_Forecast":
-        # If intent is about weather, call the Sky Watcher
+        print(">>> Delegating to Sky Watcher...") # <<< DEBUG PRINT
         agent_response = get_weather_forecast(transcribed_text)
     elif intent == "Crop_Health_Diagnosis":
+        print(">>> Responding with placeholder for Crop Health.") # <<< DEBUG PRINT
         agent_response = {"status": "info", "message": "Crop health agent is not yet implemented for voice. Please use the /diagnose_disease endpoint to upload an image."}
     else:
+        print(">>> Intent was Unknown or unhandled.") # <<< DEBUG PRINT
         agent_response = {"status": "info", "message": "Could not determine a specific action for your request."}
-
+    
+    print("--- Request Processing Complete ---") # <<< DEBUG PRINT
     return {
         "status": "success",
         "transcription": transcribed_text,
